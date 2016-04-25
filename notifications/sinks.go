@@ -78,7 +78,14 @@ func (b *Broadcaster) Close() error {
 func (b *Broadcaster) run() {
 	for {
 		select {
-		case block := <-b.events:
+		case block_ := <-b.events:
+			block := make([]Event, 0)
+			for _, v := range block_ {
+				if v.Action != EventActionPull {
+					block = append(block, v)
+				}
+			}
+
 			for _, sink := range b.sinks {
 				if err := sink.Write(block...); err != nil {
 					logrus.Errorf("broadcaster: error writing events to %v, these events will be lost: %v", sink, err)
