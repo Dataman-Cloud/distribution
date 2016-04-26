@@ -46,8 +46,16 @@ func NewBroadcaster(sinks ...Sink) *Broadcaster {
 // slice memory to the broadcaster and should not modify it after calling
 // write.
 func (b *Broadcaster) Write(events ...Event) error {
+	block := make([]Event, 0)
+	for _, v := range events {
+		if v.Action != EventActionPull {
+			logrus.Errorf("writing events with action %v", v.Action)
+			block = append(block, v)
+		}
+	}
+
 	select {
-	case b.events <- events:
+	case b.events <- block:
 	case <-b.closed:
 		return ErrSinkClosed
 	}
@@ -78,15 +86,7 @@ func (b *Broadcaster) Close() error {
 func (b *Broadcaster) run() {
 	for {
 		select {
-		case block_ := <-b.events:
-			block := make([]Event, 0)
-			for _, v := range block_ {
-				if v.Action != EventActionPull {
-					logrus.Errorf("writing events with action %v", v.Action)
-					block = append(block, v)
-				}
-			}
-
+		case block := <-b.events:
 			for _, sink := range b.sinks {
 				if err := sink.Write(block...); err != nil {
 					logrus.Errorf("broadcaster: error writing events to %v, these events will be lost: %v", sink, err)
