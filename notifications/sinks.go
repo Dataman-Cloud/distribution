@@ -82,6 +82,7 @@ func (b *Broadcaster) run() {
 			block := make([]Event, 0)
 			for _, v := range block_ {
 				if v.Action != EventActionPull {
+					logrus.Errorf("writing events with action %v", v.Action)
 					block = append(block, v)
 				}
 			}
